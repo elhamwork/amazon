@@ -44,10 +44,16 @@ pip install -r requirements.txt
 
 ## 1. Launch Chrome in debug mode
 
-Run `launch_chrome_debug.bat` (double-click it, or run from a terminal).
-This opens a **separate, brand-new** Chrome profile with remote debugging
-on port 9222. Because it's a fresh profile, it starts with **no
-extensions installed** — the first time, in *this* window you need to:
+**Windows:** run `launch_chrome_debug.bat` (double-click it, or run from
+a terminal).
+
+**Mac:** run `./launch_chrome_debug.sh` from Terminal (run `chmod +x
+launch_chrome_debug.sh` once first if it's not already executable).
+
+Either way, this opens a **separate, brand-new** Chrome profile with
+remote debugging on port 9222. Because it's a fresh profile, it starts
+with **no extensions installed** — the first time, in *this* window you
+need to:
 
 1. Log into Amazon, Keepa, and DataDive.
 2. Install the Seller Amp (SAS) and Helium 10 Chrome extensions from the
