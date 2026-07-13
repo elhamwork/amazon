@@ -15,9 +15,17 @@ COLUMNS = [
     ("rating", "Rating"),
     ("seller_count", "Seller Count"),
     ("fba_listed", "FBA Listed"),
-    ("js_monthly_sales_est", "Monthly Sales Est"),
     ("keepa_price_trend", "Price Trend"),
     ("keepa_bsr_trend", "BSR Trend"),
+    ("selleramp_margin_pct", "SAS Margin %"),
+    ("selleramp_roi_pct", "SAS ROI %"),
+    ("selleramp_monthly_sales_est", "SAS Monthly Sales"),
+    ("helium10_monthly_sales_est", "H10 Monthly Sales"),
+    ("helium10_monthly_revenue_est", "H10 Monthly Revenue"),
+    ("helium10_review_velocity", "H10 Review Velocity"),
+    ("datadive_top_keyword", "Top Keyword"),
+    ("datadive_search_volume", "Keyword Search Volume"),
+    ("datadive_ppc_bid", "Keyword PPC Bid"),
     ("score", "Score"),
 ]
 

@@ -1,9 +1,9 @@
-"""FBA product research pipeline: AliExpress -> Amazon -> Keepa -> Jungle
-Scout -> scored Excel output.
+"""FBA product research pipeline: AliExpress -> Amazon (+ Seller Amp /
+Helium 10 extension overlays) -> Keepa -> DataDive -> scored Excel output.
 
 Requires Chrome already running with remote debugging enabled (see
 README.md / launch_chrome_debug.bat) so the script reuses your logged-in
-Keepa and Jungle Scout sessions.
+Amazon/Keepa/DataDive sessions and your Seller Amp / Helium 10 extensions.
 """
 
 import argparse
@@ -16,8 +16,10 @@ from browser import get_driver, random_delay
 from excel_writer import write_excel
 from scrapers.aliexpress import scrape_aliexpress
 from scrapers.amazon import search_amazon
-from scrapers.junglescout import scrape_junglescout
+from scrapers.datadive import scrape_datadive
+from scrapers.helium10 import scrape_helium10
 from scrapers.keepa import scrape_keepa
+from scrapers.selleramp import scrape_selleramp
 
 
 def process_product(driver, *, aliexpress_url: str = None, keyword: str = None) -> dict:
@@ -33,20 +35,29 @@ def process_product(driver, *, aliexpress_url: str = None, keyword: str = None) 
         search_query = keyword
 
     if not search_query:
-        print("  !! No title/keyword available, skipping Amazon/Keepa/Jungle Scout lookups")
+        print("  !! No title/keyword available, skipping Amazon/Keepa/Seller Amp/Helium 10/DataDive lookups")
         return calculator.compute_metrics(row)
 
     print(f"  -> Amazon search: {search_query}")
     random_delay()
     row.update(search_amazon(driver, search_query))
 
+    # Seller Amp / Helium 10 are read as extension overlays on the Amazon
+    # product page we're already sitting on -- no navigation, just a wait
+    # for the extension to inject its panel.
+    print("  -> Seller Amp overlay")
+    row.update(scrape_selleramp(driver))
+
+    print("  -> Helium 10 overlay")
+    row.update(scrape_helium10(driver))
+
     print("  -> Keepa lookup")
     random_delay()
     row.update(scrape_keepa(driver, row.get("amazon_url")))
 
-    print("  -> Jungle Scout lookup")
+    print("  -> DataDive lookup")
     random_delay()
-    row.update(scrape_junglescout(driver, search_query))
+    row.update(scrape_datadive(driver, search_query))
 
     if not row.get("amazon_title"):
         row["amazon_title"] = row.get("title") or search_query
