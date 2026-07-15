@@ -5,7 +5,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 
 import config
-from browser import human_scroll, random_delay
+from browser import human_scroll, random_delay, wait_for_element
 
 
 def _clean_price(text: str) -> float | None:
@@ -38,8 +38,6 @@ def search_amazon(driver, query: str) -> dict:
     the result as a competitor/comparable, not a guaranteed exact match."""
     search_url = f"https://www.amazon.com/s?k={urllib.parse.quote(query)}"
     driver.get(search_url)
-    random_delay()
-    human_scroll(driver)
 
     sel = config.SELECTORS["amazon"]
     data = {
@@ -51,17 +49,25 @@ def search_amazon(driver, query: str) -> dict:
         "fba_listed": None,
         "amazon_title": None,
         "amazon_url": None,
+        "_debug_page_title": driver.title,
+        "_debug_current_url": driver.current_url,
     }
 
-    try:
-        link = driver.find_element(By.CSS_SELECTOR, sel["search_result_link"])
-        data["amazon_url"] = link.get_attribute("href")
-        link.click()
-    except NoSuchElementException:
+    link = wait_for_element(driver, sel["search_result_link"], timeout=10)
+    data["_debug_page_title"] = driver.title
+    data["_debug_current_url"] = driver.current_url
+    if link is None:
+        # No search result rendered in time -- likely a captcha/bot-check
+        # page, or the search selector is stale. See _debug_* fields.
         return data
+
+    data["amazon_url"] = link.get_attribute("href")
+    link.click()
 
     random_delay()
     human_scroll(driver)
+    data["_debug_page_title"] = driver.title
+    data["_debug_current_url"] = driver.current_url
 
     try:
         data["amazon_title"] = driver.find_element(By.CSS_SELECTOR, sel["title"]).text.strip()

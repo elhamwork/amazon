@@ -57,9 +57,16 @@ def process_product(driver, *, aliexpress_url: str = None, keyword: str = None, 
     print(f"  -> Amazon search: {amazon_query}")
     random_delay()
     row.update(search_amazon(driver, amazon_query))
-    print(f"     matched: {row.get('amazon_title')!r}")
-    print(f"     price={row.get('amazon_price')}  bsr={row.get('bsr')}  "
-          f"rating={row.get('rating')}  reviews={row.get('review_count')}")
+    if not row.get("amazon_url"):
+        print(f"  !! Amazon search returned no result. "
+              f"Browser tab title: {row.get('_debug_page_title')!r}, "
+              f"URL: {row.get('_debug_current_url')}")
+        print("  !! This usually means a captcha/bot-check page instead of "
+              "real search results, or Amazon showed a 'no results' page.")
+    else:
+        print(f"     matched: {row.get('amazon_title')!r}")
+        print(f"     price={row.get('amazon_price')}  bsr={row.get('bsr')}  "
+              f"rating={row.get('rating')}  reviews={row.get('review_count')}")
 
     if free_only:
         if not row.get("amazon_title"):
