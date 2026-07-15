@@ -15,6 +15,23 @@ def _clean_price(text: str) -> float | None:
     return float(match.group()) if match else None
 
 
+def _find_first_product_link(driver):
+    """Amazon's search result markup has shifted the <a>/<h2> nesting more
+    than once over the years (h2 wrapping a, then a wrapping h2), so
+    matching that structure exactly is fragile. Product links are the one
+    constant: they always point at /dp/<ASIN>. Search within result
+    containers for that instead of a specific tag nesting."""
+    containers = driver.find_elements(
+        By.CSS_SELECTOR, "div[data-component-type='s-search-result']"
+    )
+    for container in containers:
+        for link in container.find_elements(By.CSS_SELECTOR, "a[href*='/dp/']"):
+            href = link.get_attribute("href")
+            if href:
+                return link
+    return None
+
+
 def _find_bsr(driver) -> int | None:
     sel = config.SELECTORS["amazon"]
     try:
@@ -53,12 +70,15 @@ def search_amazon(driver, query: str) -> dict:
         "_debug_current_url": driver.current_url,
     }
 
-    link = wait_for_element(driver, sel["search_result_link"], timeout=10)
+    wait_for_element(driver, "div[data-component-type='s-search-result']", timeout=10)
     data["_debug_page_title"] = driver.title
     data["_debug_current_url"] = driver.current_url
+
+    link = _find_first_product_link(driver)
     if link is None:
         # No search result rendered in time -- likely a captcha/bot-check
-        # page, or the search selector is stale. See _debug_* fields.
+        # page, a genuine "no results" page, or a further markup change.
+        # See _debug_* fields.
         return data
 
     data["amazon_url"] = link.get_attribute("href")
