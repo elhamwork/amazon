@@ -14,10 +14,34 @@ def _clean_price(text: str) -> float | None:
     return float(match.group()) if match else None
 
 
+def _extract_title(driver, sel: dict) -> str | None:
+    """AliExpress pages often have multiple <h1> tags, some empty/hidden,
+    so the first match isn't reliable. Try every <h1> for real text, then
+    fall back to the browser tab title (usually "<product name> -
+    AliExpress ...") since that's present even when the DOM selector is
+    stale."""
+    wait_for_element(driver, sel["title"], timeout=10)
+    for el in driver.find_elements(By.CSS_SELECTOR, sel["title"]):
+        text = el.text.strip()
+        if text:
+            return text
+
+    tab_title = driver.title.strip()
+    if tab_title:
+        for suffix in (" - AliExpress", " | AliExpress"):
+            if suffix in tab_title:
+                return tab_title.split(suffix)[0].strip()
+        return tab_title
+
+    return None
+
+
 def scrape_aliexpress(driver, url: str) -> dict:
     """Scrapes a single AliExpress product page. Returns dict with
     raw fields; any field that can't be found comes back as None so
-    downstream code (and the spreadsheet) can flag it rather than crash."""
+    downstream code (and the spreadsheet) can flag it rather than crash.
+    Always includes _debug_page_title/_debug_current_url so callers can
+    show what actually loaded when scraping comes up empty."""
     driver.get(url)
 
     sel = config.SELECTORS["aliexpress"]
@@ -27,18 +51,16 @@ def scrape_aliexpress(driver, url: str) -> dict:
         "aliexpress_price": None,
         "shipping_cost": None,
         "moq": None,
+        "_debug_page_title": driver.title,
+        "_debug_current_url": driver.current_url,
     }
 
-    title_el = wait_for_element(driver, sel["title"], timeout=10)
-    if title_el is None:
-        # Page didn't render an h1 in time -- likely a captcha, country
-        # picker, or bot-detection interstitial instead of the real
-        # product page. Surface what actually loaded so it's debuggable
-        # without switching to the browser window.
-        data["_debug_page_title"] = driver.title
-        data["_debug_current_url"] = driver.current_url
+    data["title"] = _extract_title(driver, sel)
+    data["_debug_page_title"] = driver.title
+    data["_debug_current_url"] = driver.current_url
+
+    if data["title"] is None:
         return data
-    data["title"] = title_el.text.strip()
 
     random_delay()
     human_scroll(driver)

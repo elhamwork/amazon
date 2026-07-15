@@ -35,8 +35,8 @@ def process_product(driver, *, aliexpress_url: str = None, keyword: str = None, 
         search_query = keyword
 
     if not search_query:
-        if "_debug_page_title" in row:
-            print(f"  !! AliExpress page didn't load as expected. "
+        if row.get("_debug_page_title") is not None:
+            print(f"  !! AliExpress title extraction failed. "
                   f"Browser tab title: {row['_debug_page_title']!r}, "
                   f"URL: {row['_debug_current_url']}")
             print("  !! This usually means a captcha, shipping-country "
