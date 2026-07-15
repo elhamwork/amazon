@@ -22,7 +22,7 @@ from scrapers.keepa import scrape_keepa
 from scrapers.selleramp import scrape_selleramp
 
 
-def process_product(driver, *, aliexpress_url: str = None, keyword: str = None) -> dict:
+def process_product(driver, *, aliexpress_url: str = None, keyword: str = None, free_only: bool = False) -> dict:
     row = {}
 
     if aliexpress_url:
@@ -35,12 +35,17 @@ def process_product(driver, *, aliexpress_url: str = None, keyword: str = None) 
         search_query = keyword
 
     if not search_query:
-        print("  !! No title/keyword available, skipping Amazon/Keepa/Seller Amp/Helium 10/DataDive lookups")
+        print("  !! No title/keyword available, skipping Amazon lookup")
         return calculator.compute_metrics(row)
 
     print(f"  -> Amazon search: {search_query}")
     random_delay()
     row.update(search_amazon(driver, search_query))
+
+    if free_only:
+        if not row.get("amazon_title"):
+            row["amazon_title"] = row.get("title") or search_query
+        return calculator.compute_metrics(row)
 
     # Seller Amp / Helium 10 are read as extension overlays on the Amazon
     # product page we're already sitting on -- no navigation, just a wait
@@ -91,6 +96,11 @@ def main():
     parser.add_argument("--csv", help="Path to a CSV of AliExpress URLs (one per row, first column)")
     parser.add_argument("--keywords", help="Comma-separated product keywords (no AliExpress URL)")
     parser.add_argument("--output", default=config.OUTPUT_XLSX, help="Output .xlsx path")
+    parser.add_argument(
+        "--free-only",
+        action="store_true",
+        help="Only scrape AliExpress + Amazon; skip Keepa/Seller Amp/Helium 10/DataDive (no accounts needed)",
+    )
     args = parser.parse_args()
 
     jobs = []  # list of (aliexpress_url, keyword)
@@ -126,7 +136,7 @@ def main():
     for i, (url, keyword) in enumerate(jobs, start=1):
         print(f"\n[{i}/{len(jobs)}] Processing...")
         try:
-            row = process_product(driver, aliexpress_url=url, keyword=keyword)
+            row = process_product(driver, aliexpress_url=url, keyword=keyword, free_only=args.free_only)
         except Exception as exc:
             print(f"  !! Error processing this product: {exc}")
             row = {"source_url": url, "title": keyword, "score": "SKIP"}
