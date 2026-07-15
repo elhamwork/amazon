@@ -39,6 +39,19 @@ def human_scroll(driver: webdriver.Chrome) -> None:
         time.sleep(random.uniform(*config.SCROLL_PAUSE_SECONDS))
 
 
+def wait_for_element(driver: webdriver.Chrome, css_selector: str, timeout: float = 8):
+    """Generic wait for a CSS selector to appear -- use this instead of an
+    immediate find_element() right after driver.get(), since slow-loading
+    pages (AliExpress especially) often aren't fully rendered yet when the
+    next line of code runs."""
+    try:
+        return WebDriverWait(driver, timeout).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, css_selector))
+        )
+    except TimeoutException:
+        return None
+
+
 def wait_for_extension_panel(driver: webdriver.Chrome, css_selector: str, timeout: float = None):
     """Chrome extensions (Seller Amp, Helium 10) inject their overlay
     asynchronously after page load, so a plain find_element right away

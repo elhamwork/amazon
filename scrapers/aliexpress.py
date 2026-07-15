@@ -4,7 +4,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 
 import config
-from browser import human_scroll, random_delay
+from browser import human_scroll, random_delay, wait_for_element
 
 
 def _clean_price(text: str) -> float | None:
@@ -19,8 +19,6 @@ def scrape_aliexpress(driver, url: str) -> dict:
     raw fields; any field that can't be found comes back as None so
     downstream code (and the spreadsheet) can flag it rather than crash."""
     driver.get(url)
-    random_delay()
-    human_scroll(driver)
 
     sel = config.SELECTORS["aliexpress"]
     data = {
@@ -31,10 +29,19 @@ def scrape_aliexpress(driver, url: str) -> dict:
         "moq": None,
     }
 
-    try:
-        data["title"] = driver.find_element(By.CSS_SELECTOR, sel["title"]).text.strip()
-    except NoSuchElementException:
-        pass
+    title_el = wait_for_element(driver, sel["title"], timeout=10)
+    if title_el is None:
+        # Page didn't render an h1 in time -- likely a captcha, country
+        # picker, or bot-detection interstitial instead of the real
+        # product page. Surface what actually loaded so it's debuggable
+        # without switching to the browser window.
+        data["_debug_page_title"] = driver.title
+        data["_debug_current_url"] = driver.current_url
+        return data
+    data["title"] = title_el.text.strip()
+
+    random_delay()
+    human_scroll(driver)
 
     try:
         price_text = driver.find_element(By.CSS_SELECTOR, sel["price"]).text
