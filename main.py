@@ -22,6 +22,15 @@ from scrapers.keepa import scrape_keepa
 from scrapers.selleramp import scrape_selleramp
 
 
+def _shorten_query(title: str, max_words: int = 6) -> str:
+    """AliExpress titles are often SEO keyword-stuffed run-ons ("Customized
+    Durable Reliable Lawn Mower High Efficiency Powerful Engine..."), which
+    make terrible Amazon search queries. Take just the first few words as
+    a rough approximation of the actual product name."""
+    words = title.split()
+    return " ".join(words[:max_words])
+
+
 def process_product(driver, *, aliexpress_url: str = None, keyword: str = None, free_only: bool = False) -> dict:
     row = {}
 
@@ -44,9 +53,13 @@ def process_product(driver, *, aliexpress_url: str = None, keyword: str = None, 
         print("  !! No title/keyword available, skipping Amazon lookup")
         return calculator.compute_metrics(row)
 
-    print(f"  -> Amazon search: {search_query}")
+    amazon_query = _shorten_query(search_query)
+    print(f"  -> Amazon search: {amazon_query}")
     random_delay()
-    row.update(search_amazon(driver, search_query))
+    row.update(search_amazon(driver, amazon_query))
+    print(f"     matched: {row.get('amazon_title')!r}")
+    print(f"     price={row.get('amazon_price')}  bsr={row.get('bsr')}  "
+          f"rating={row.get('rating')}  reviews={row.get('review_count')}")
 
     if free_only:
         if not row.get("amazon_title"):
